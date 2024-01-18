@@ -62,20 +62,21 @@ def main():
 """Usage: Search programming languages based on their category or by name.
   e to exit the program
   c to search by language category
+  a to see all category names
   l to search by language name
 >>> """)
-    if input_c not in "ecl": continue
-    if input_c=='e':
+    if input_c not in "aecl": continue
+    if input_c=='a':
+      print('\n'.join(c for c in categories.keys()))
+    elif input_c=='e':
       print("Goodbye!")
       break
     elif input_c=='c': search_by_category(categories,categories_rev,language_types)
-    elif input_c=='l': raise NotImplementedError("TODO")
+    elif input_c=='l': search_by_language(language_types)
 def all_false(arr):
-  all_is_false=False
   for v in arr:
-    if v==True: break
-  else: all_is_false=True
-  return all_is_false
+    if v==True: return False
+  return True
 def binary_search(sorted_arr,value) -> int|None:
   left=0
   right=len(sorted_arr)-1
@@ -123,5 +124,55 @@ def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,la
       else:
         for e in searching_categories:
           print(categories_rev[e])
+def lps_array(pattern):
+  """Array of (L)ongest proper (P)refix which is also (S)uffix. For the KMP algorithm."""
+  pattern_len=len(pattern)
+  this_len=0
+  i=1
+  lps=[0]*pattern_len
+  while i<pattern_len:
+    if pattern[i]==pattern[this_len]:
+      lps[i]=this_len+1
+      this_len+=1
+      i+=1
+    else:
+      if this_len!=0:
+        this_len=lps[this_len-1]
+      else:
+        lps[i]=0
+        i+=1
+  return lps
+def kmp_exists(text,pattern,case_insensitive=False):
+  """True if pattern exists in text. Algorithm from https://en.wikipedia.org/wiki/Knuth–Morris–Pratt_algorithm"""
+  text=text.lower() if case_insensitive else text
+  pattern=pattern.lower() if case_insensitive else pattern
+  text_len=len(text)
+  pattern_len=len(pattern)
+  lps=lps_array(pattern)
+  i=0
+  j=0
+  while i<text_len:
+    if text[i]==pattern[j]:
+      i+=1
+      j+=1
+      if j==pattern_len:
+        return True
+    else:
+      if j!=0:
+        j=lps[j-1]
+      else:
+        i+=1
+  return False
+def search_by_language(language_types:LanguageCategories):
+  language_table:list[str]=[language for language in language_types.keys()]
+  while True:
+    language_searched=[]
+    input_str=input("What language name do you want to search for? Type 'exit' to exit >>> ")
+    for language in language_table:
+      if kmp_exists(language,input_str,False): language_searched.append(language)
+    print(f"Found {len(language_searched)} language/languages")
+    for language in language_searched: print(language)
+    if input_str=='exit': return
+    
 if __name__ == '__main__':
   main()
