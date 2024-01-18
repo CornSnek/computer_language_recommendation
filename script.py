@@ -6,7 +6,8 @@ CategoryE=int
 CategoryDict=dict[str:CategoryE]
 CategoryDictRev=list[str]
 LanguageCategories=dict[str:list[CategoryE]]
-def add_language(line:str,first_i:int,categories:CategoryDict,language_types:LanguageCategories,last_category:CategoryE) -> int:
+def add_language(line:str,first_i:int,categories:CategoryDict,language_types:LanguageCategories,last_category:CategoryE,language_blacklist:set[str]) -> int:
+  """Returns int that retrurns characters to skip after ']]'"""
   last_i=line.index(']]',first_i)
   new_first_i=None #Not none if | is found
   try: new_first_i=line.index("|",first_i)
@@ -15,24 +16,26 @@ def add_language(line:str,first_i:int,categories:CategoryDict,language_types:Lan
     language=line[new_first_i+1:last_i]
   else:
     language=line[first_i+2:last_i]
-  if not categories.get(language):
+  if not categories.get(language) and language not in language_blacklist:
     if list_exist:=language_types.get(language):
-      if list_exist[-1]!=last_category:
+      if list_exist[-1]!=last_category: #Don't add the same number.
         list_exist.append(last_category)
     else:
       language_types[language]=[last_category]
-  return len(line[first_i:last_i+2]) #Skip all characters after ']]'
-def parse_wiki(text_arr,categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories):
+  return len(line[first_i:last_i+2])
+def parse_wiki(text_arr,categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories,language_blacklist:set[str]):
   last_category:CategoryE|None=None
+  is_systems=False
   for line in text_arr:
     if line.startswith("== "):
       maybe_category=line[3:line.index(" ==")] #Extract the category surrounding '== ' and ' =='
       if "language" not in maybe_category and "Language" not in maybe_category:
         last_category=None
         continue
+      if maybe_category=="System languages": is_systems=True
       last_category=len(categories)
       categories[maybe_category]=last_category
-    elif line[0]=='*':
+    if not is_systems and line[0]=='*':
       if not last_category: continue #Don't read lines without proper Category
       first_i=1
       while line[first_i]=='*':
@@ -40,42 +43,25 @@ def parse_wiki(text_arr,categories:CategoryDict,categories_rev:CategoryDictRev,l
       first_i=first_i+1
       if line[first_i] in is_alphanum:
         while line[first_i]!='\n':
-          if line[first_i]=='[' and line[first_i+1]=='[':
-            first_i += add_language(line,first_i,categories,language_types,last_category)
+          if line[first_i:first_i+2]=='[[':
+            first_i += add_language(line,first_i,categories,language_types,last_category,language_blacklist)
           else:
             first_i += 1
       else:
         if line[first_i]=='{': continue #The only line that contained '* {'
         while line[first_i]!='\n':
-          if line[first_i]=='[' and line[first_i+1]=='[':
-            first_i += add_language(line,first_i,categories,language_types,last_category)
+          if line[first_i:first_i+2]=='[[':
+            first_i += add_language(line,first_i,categories,language_types,last_category,language_blacklist)
           else:
             first_i += 1
+    elif is_systems and line[0:2]=='| ':
+      first_i=2
+      while line[first_i]!='\n':
+        if line[first_i:first_i+2]=='[[':
+          first_i += add_language(line,first_i,categories,language_types,last_category,language_blacklist)
+        else:
+          first_i+=1
   for k,v in categories.items(): categories_rev[v]=k
-def main():
-  categories:CategoryDict={} #As Enum dictionary
-  categories_rev:CategoryDictRev={} #Enum -> str
-  language_types:LanguageCategories={} #A language may have multiple categories
-  use_case=True
-  parse_wiki(text_arr,categories,categories_rev,language_types)
-  while True:
-    input_c=input(
-f"""Usage: Search programming languages based on their category or by name.
-  e to exit the program
-  c to search by language category
-  a to see all category names
-  l to search by language name
-  s to toggle case-sensitivity (Currently {use_case})
->>> """)
-    if input_c not in "aecls": continue
-    if input_c=='a':
-      print('\n'.join(c for c in categories.keys()))
-    elif input_c=='e':
-      print("Goodbye!")
-      break
-    elif input_c=='c': search_by_category(categories,categories_rev,language_types,use_case)
-    elif input_c=='l': search_by_language(language_types,use_case)
-    else: use_case=not use_case
 def all_false(arr):
   for v in arr:
     if v==True: return False
@@ -145,7 +131,7 @@ def lps_array(pattern):
         i+=1
   return lps
 def kmp_exists(text,pattern,case_sensitive=True):
-  """True if pattern exists in text. Algorithm from https://en.wikipedia.org/wiki/Knuth–Morris–Pratt_algorithm"""
+  """True if pattern exists in text. Algorithm from https://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm"""
   text=text if case_sensitive else text.lower()
   pattern=pattern if case_sensitive else pattern.lower()
   text_len=len(text)
@@ -175,6 +161,33 @@ def search_by_language(language_types:LanguageCategories,use_case:bool):
     print(f"Found {len(language_searched)} language/languages")
     for language in language_searched: print(language)
     if input_str=='exit': return
-    
+def main():
+  categories:CategoryDict={} #As Enum dictionary
+  categories_rev:CategoryDictRev={} #Enum -> str
+  language_blacklist:set[str]=set([
+    "AutoCAD","CA-DATACOM/DB","Unisys/Sperry","Sterling/Informatics","optimization","scheduling","cross-platform","Horn logic","logical resolution",
+    "32-bit","64-bit","18-bit","12-bit","36-bit","16-bit:","16-bit x86","8-bit",
+  ]) #Some links are not languages.
+  language_types:LanguageCategories={} #A language may have multiple categories
+  use_case=True
+  parse_wiki(text_arr,categories,categories_rev,language_types,language_blacklist)
+  while True:
+    input_c=input(
+f"""Usage: Search programming languages based on their category or by name.
+  e to exit the program
+  c to search by language category
+  a to see all category names
+  l to search by language name
+  s to toggle case-sensitivity (Currently {use_case})
+>>> """)
+    if input_c not in "aecls": continue
+    if input_c=='a':
+      print('\n'.join(c for c in categories.keys()))
+    elif input_c=='e':
+      print("Goodbye!")
+      break
+    elif input_c=='c': search_by_category(categories,categories_rev,language_types,use_case)
+    elif input_c=='l': search_by_language(language_types,use_case)
+    else: use_case=not use_case
 if __name__ == '__main__':
   main()
