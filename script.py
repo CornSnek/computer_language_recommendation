@@ -56,23 +56,26 @@ def main():
   categories:CategoryDict={} #As Enum dictionary
   categories_rev:CategoryDictRev={} #Enum -> str
   language_types:LanguageCategories={} #A language may have multiple categories
+  use_case=True
   parse_wiki(text_arr,categories,categories_rev,language_types)
   while True:
     input_c=input(
-"""Usage: Search programming languages based on their category or by name.
+f"""Usage: Search programming languages based on their category or by name.
   e to exit the program
   c to search by language category
   a to see all category names
   l to search by language name
+  s to toggle case-sensitivity (Currently {use_case})
 >>> """)
-    if input_c not in "aecl": continue
+    if input_c not in "aecls": continue
     if input_c=='a':
       print('\n'.join(c for c in categories.keys()))
     elif input_c=='e':
       print("Goodbye!")
       break
-    elif input_c=='c': search_by_category(categories,categories_rev,language_types)
-    elif input_c=='l': search_by_language(language_types)
+    elif input_c=='c': search_by_category(categories,categories_rev,language_types,use_case)
+    elif input_c=='l': search_by_language(language_types,use_case)
+    else: use_case=not use_case
 def all_false(arr):
   for v in arr:
     if v==True: return False
@@ -86,7 +89,7 @@ def binary_search(sorted_arr,value) -> int|None:
     else: left=middle
   if sorted_arr[left]==value: return left
   return None
-def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories):
+def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories,use_case:bool):
   using_categories=[False for _ in range(len(categories))]
   while True:
     print("Current categories enabled: ")
@@ -102,7 +105,6 @@ def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,la
       else:
         matched_languages=[]
         using_categories_list=[e for e,b in enumerate(using_categories) if b] #Get enums that are True only
-        print(using_categories_list)
         for language,lc in language_types.items():
           for e in using_categories_list:
             if binary_search(lc,e)==None: break
@@ -110,12 +112,12 @@ def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,la
         print("Recommended language(s) for you based on the enabled categories:")
         for ml in matched_languages:
           print(ml)
-        if not matched_languages: print("(None. A language does not have all of these categories.)")
+        if not matched_languages: print("(None. No language has all of these categories.)")
     else:
       searching_categories=[]
-      for k,v in categories.items():
-        if input_str in k:
-          searching_categories.append(v)
+      for c,e in categories.items():
+        if input_str in (c if use_case else c.lower()):
+          searching_categories.append(e)
       print(f"Searching {len(searching_categories)} category/categories")
       if len(searching_categories)==1:
         toggle_category=searching_categories[0]
@@ -142,10 +144,10 @@ def lps_array(pattern):
         lps[i]=0
         i+=1
   return lps
-def kmp_exists(text,pattern,case_insensitive=False):
+def kmp_exists(text,pattern,case_sensitive=True):
   """True if pattern exists in text. Algorithm from https://en.wikipedia.org/wiki/Knuth–Morris–Pratt_algorithm"""
-  text=text.lower() if case_insensitive else text
-  pattern=pattern.lower() if case_insensitive else pattern
+  text=text if case_sensitive else text.lower()
+  pattern=pattern if case_sensitive else pattern.lower()
   text_len=len(text)
   pattern_len=len(pattern)
   lps=lps_array(pattern)
@@ -163,13 +165,13 @@ def kmp_exists(text,pattern,case_insensitive=False):
       else:
         i+=1
   return False
-def search_by_language(language_types:LanguageCategories):
+def search_by_language(language_types:LanguageCategories,use_case:bool):
   language_table:list[str]=[language for language in language_types.keys()]
   while True:
     language_searched=[]
     input_str=input("What language name do you want to search for? Type 'exit' to exit >>> ")
     for language in language_table:
-      if kmp_exists(language,input_str,False): language_searched.append(language)
+      if kmp_exists(language,input_str,use_case): language_searched.append(language)
     print(f"Found {len(language_searched)} language/languages")
     for language in language_searched: print(language)
     if input_str=='exit': return
