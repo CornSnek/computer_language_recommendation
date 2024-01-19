@@ -129,7 +129,7 @@ def pop_as_heap(heap_arr:list,context:HeapSortContext,check_if_still_heap=False)
   return return_value
 def heapsort(arr:list,context:HeapSortContext):
   """Using the pseudocode from https://en.wikipedia.org/wiki/Heapsort"""
-  use_context=context.copy_inv()
+  use_context=context.copy_inv() #Inverse context sort functions to make the sorting context valid from left to right.
   for i in reversed(range(len(arr)>>1)): sift_down(arr,i,len(arr),use_context) #Heapify array
   for end in reversed(range(len(arr))):
     temp=arr[end]

@@ -62,10 +62,9 @@ def parse_wiki(text_arr,categories:CategoryDict,categories_rev:CategoryDictRev,l
         else:
           first_i+=1
   for k,v in categories.items(): categories_rev[v]=k
-  ahs_context=AlphabeticalHeapSortContext() #Sort considering a-z and A-Z as equal
   for language in language_types.keys():
     language_table.append(language)
-  heapsort(language_table,ahs_context)
+  heapsort(language_table,AlphabeticalHeapSortContext()) #Sort considering a-z and A-Z as equal
 def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories,use_case:bool):
   using_categories=[False for _ in range(len(categories))]
   while True:
@@ -126,20 +125,19 @@ def main():
   while True:
     input_c=input(
 f"""Usage: Search programming languages based on their category or by name.
-  e to exit the program
+  exit to exit the program
   c to search by language category
-  a to see all category names
+  ac to see all category names
+  al to see all languages
   l to search by language name
   s to toggle case-sensitivity (Currently {use_case})
 >>> """)
-    if input_c not in "aecls": continue
-    if input_c=='a':
-      print('\n'.join(c for c in categories.keys()))
-    elif input_c=='e':
-      print("Goodbye!")
-      break
+    if input_c=='exit': break
+    elif input_c=='ac': print('\n'.join(c for c in categories.keys()))
+    elif input_c=='al': print('\n'.join(l for l in language_table))
     elif input_c=='c': search_by_category(categories,categories_rev,language_types,use_case)
     elif input_c=='l': search_by_language(use_case,language_table)
-    else: use_case=not use_case
+    elif input_c=='s': use_case=not use_case
+  print("Goodbye!")
 if __name__ == '__main__':
   main()
