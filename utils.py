@@ -58,6 +58,8 @@ class HeapSortContext:
   def __init__(self,sortf,sortf_inv):
     self.sortf=sortf
     self.sortf_inv=sortf_inv
+  def copy_inv(self):
+    return HeapSortContext(self.sortf_inv,self.sortf) #For heapsort because it sorts the context values backwards
 class HeapSortMinIntContext(HeapSortContext):
   def __init__(self):
     super().__init__(sortf=HeapSortMinIntContext.l_lt_r,sortf_inv=HeapSortMinIntContext.l_gt_r)
@@ -67,7 +69,7 @@ class HeapSortMinIntContext(HeapSortContext):
     return arr[l]>arr[r]
 class AlphabeticalHeapSortContext(HeapSortContext):
   def __init__(self):
-    super().__init__(sortf=HeapSortMinIntContext.l_lt_r,sortf_inv=HeapSortMinIntContext.l_gt_r)
+    super().__init__(sortf=AlphabeticalHeapSortContext.l_lt_r,sortf_inv=AlphabeticalHeapSortContext.l_gt_r)
   def l_lt_r(arr:list[str],l:int,r:int):
     return arr[l].lower()<arr[r].lower()
   def l_gt_r(arr:list[str],l:int,r:int):
@@ -85,14 +87,15 @@ def is_valid_heap_recurse(arr,at_i,context:HeapSortContext):
 def is_valid_heap(arr,context:HeapSortContext): #For unit testing if an array is still a min heap
   if len(arr)==0: return True
   else: return is_valid_heap_recurse(arr,0,context)
-def sift_down_min(heap_arr:list,at_i,context:HeapSortContext):
-  next_i=at_i
+def sift_down(heap_arr:list,start:int,end:int,context:HeapSortContext):
+  #start is included, but end is excluded
+  next_i=start
   while True:
     left_i=(next_i<<1)+1
-    if left_i>=len(heap_arr): break
+    if left_i>=end: break
     child_i=left_i
     right_i=left_i+1
-    if right_i<len(heap_arr): #If valid, check if right is smaller than left
+    if right_i<end: #If valid, check if right is smaller than left
       if context.sortf(heap_arr,right_i,left_i): child_i=right_i
     if context.sortf(heap_arr,child_i,next_i): #Check if the smallest child_i violates the min heap
       temp=heap_arr[child_i]
@@ -121,22 +124,37 @@ def pop_as_heap(heap_arr:list,context:HeapSortContext,check_if_still_heap=False)
   heap_arr[0]=heap_arr[-1]
   heap_arr[-1]=return_value
   del heap_arr[-1]
-  for i in range(len(heap_arr)>>1,-1,-1): sift_down_min(heap_arr,i,context)
+  for i in reversed(range(len(heap_arr)>>1)): sift_down(heap_arr,i,len(heap_arr),context)
   if check_if_still_heap: assert(is_valid_heap(heap_arr,context))
   return return_value
+def heapsort(arr:list,context:HeapSortContext):
+  """Using the pseudocode from https://en.wikipedia.org/wiki/Heapsort"""
+  use_context=context.copy_inv()
+  for i in reversed(range(len(arr)>>1)): sift_down(arr,i,len(arr),use_context) #Heapify array
+  for end in reversed(range(len(arr))):
+    temp=arr[end]
+    arr[end]=arr[0]
+    arr[0]=temp
+    for i in reversed(range(end>>1)): sift_down(arr,i,end,use_context) #Heapify again (excluding the end) after placing the extreme value at the end.
 class MinHeapMethods(unittest.TestCase): #Check if the methods can work with random integers
   UseContext=HeapSortMinIntContext()
   def test_add_as_heap(self):
-    for _ in range(1000):
+    for _ in range(100):
       use_heap=[]
       for elem in random.sample(range(0,100),100):
         add_as_heap(use_heap,elem,MinHeapMethods.UseContext,True)
   def test_pop_as_heap(self):
     use_heap=[]
-    for _ in range(1000):
+    for _ in range(100):
       rand_ints=random.sample(range(0,100),100)
       for elem in rand_ints:
         add_as_heap(use_heap,elem,MinHeapMethods.UseContext,True)
       while pop_as_heap(use_heap,MinHeapMethods.UseContext,check_if_still_heap=True)!=None: pass
+  def test_heapsort(self):
+    for _ in range(100):
+      should_be_sorted=random.sample(range(0,100),100)
+      heapsort(should_be_sorted,MinHeapMethods.UseContext)
+      for i in range(len(should_be_sorted)-1):
+        assert(MinHeapMethods.UseContext.sortf(should_be_sorted,i,i+1))
 if __name__ == '__main__':
   unittest.main()

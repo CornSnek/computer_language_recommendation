@@ -1,4 +1,4 @@
-from utils import all_false,binary_search,kmp_exists,AlphabeticalHeapSortContext,add_as_heap,pop_as_heap
+from utils import all_false,binary_search,kmp_exists,AlphabeticalHeapSortContext,heapsort
 with open('wikipedia_programming_languages.txt') as wpl:
   text_arr=wpl.readlines()
 is_alphanum='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -63,11 +63,9 @@ def parse_wiki(text_arr,categories:CategoryDict,categories_rev:CategoryDictRev,l
           first_i+=1
   for k,v in categories.items(): categories_rev[v]=k
   ahs_context=AlphabeticalHeapSortContext() #Sort considering a-z and A-Z as equal
-  heap_language_table=[]
   for language in language_types.keys():
-    add_as_heap(heap_language_table,language,ahs_context,True)
-  while len(heap_language_table)!=0:
-    language_table.append(pop_as_heap(heap_language_table,ahs_context,check_if_still_heap=True))
+    language_table.append(language)
+  heapsort(language_table,ahs_context)
 def search_by_category(categories:CategoryDict,categories_rev:CategoryDictRev,language_types:LanguageCategories,use_case:bool):
   using_categories=[False for _ in range(len(categories))]
   while True:
